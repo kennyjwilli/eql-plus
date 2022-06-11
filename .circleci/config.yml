@@ -1,0 +1,20 @@
+version: 2.1
+
+jobs:
+  test:
+    docker:
+      - image: cimg/clojure:1.11.1
+    steps:
+      - checkout
+      - run:
+          name: Run tests
+          command: |
+            ./bin/kaocha --reporter documentation --plugin kaocha.plugin/junit-xml --junit-xml-file test-results/kaocha/results.xml
+      - store_test_results:
+          path: test-results
+
+workflows:
+  version: 2
+  ci-workflow:
+    jobs:
+      - test

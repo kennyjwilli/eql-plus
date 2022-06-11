@@ -1,0 +1,5 @@
+{:deps {edn-query-language/eql {:mvn/version "2021.07.18"}}
+ :aliases
+ {:test {:extra-deps {lambdaisland/kaocha           {:mvn/version "1.66.1034"}
+                      lambdaisland/kaocha-junit-xml {:mvn/version "0.0.76"}}
+         :main-opts  ["-m" "kaocha.runner"]}}}
