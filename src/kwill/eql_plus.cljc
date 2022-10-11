@@ -201,7 +201,8 @@
     `vf` - Function passed the `:key`, `:value`, and `:node` and should return
       the value to be passed to `rf`."
   [ast m {:keys [rf vf node-key-fn]
-          :or   {node-key-fn :dispatch-key
+          :or   {rf          #(assoc %1 (:key %2) (:value %2))
+                 node-key-fn :dispatch-key
                  vf          :value}
           :as   opts}]
   (let [dispatch->node (into {} (map (juxt node-key-fn identity)) (:children ast))]

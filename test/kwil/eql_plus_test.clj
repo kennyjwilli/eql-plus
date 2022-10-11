@@ -162,6 +162,11 @@
   )
 
 (deftest apply-transform-unit-test
+  (is (= {:a 1 :b {:c 2} :d 3}
+        (eql+/apply-transform
+          [:a :b :c]
+          {:a 1 :b {:c 2} :d 3}
+          {})))
   (is (= {:A 1
           :B {}
           :C [{:A 1}]}
