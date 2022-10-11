@@ -189,29 +189,34 @@
    (eql/ast->query (datomic-pull->ast pull-pattern opts))))
 
 (defn apply-transform*
-  "Calls `rf` for every kv in m. Recursively follows paths when the path exists
-  in `ast`. `node-key-fn` determines how a node is uniquely identified, defaulting
-  to the node's `:dispatch-key`.
-
-  `rf` is passed the current accumulated map and a map of the following keys.
-    `:key` - the key in `m`
-    `:value` - the value in `m`
-    `:node` - the node at the path for the kv pair."
-  [ast m {:keys [rf node-key-fn]
-          :or   {node-key-fn :dispatch-key}
+  "Returns a map created by recursively following paths that exist in the EQL `ast`
+  and `m`. Takes an option map of the following keys.
+    `rf` - Reducing function called for every kv in `m`. The function is passed
+      the accumulated map and a map with the following keys.
+        `:key` - the key in `m`
+        `:value` - the value in `m`
+        `:node` - the node at the path for the kv pair.
+    `node-key-fn` - Function passed the AST node returning a unique identifier
+      for the node at that position in the tree. Defaults to :dispatch-key.
+    `vf` - Function passed the `:key`, `:value`, and `:node` and should return
+      the value to be passed to `rf`."
+  [ast m {:keys [rf vf node-key-fn]
+          :or   {node-key-fn :dispatch-key
+                 vf          :value}
           :as   opts}]
   (let [dispatch->node (into {} (map (juxt node-key-fn identity)) (:children ast))]
     (reduce-kv
       (fn [new-map k v]
         (let [node-at-k (get dispatch->node k)
               children? (:children node-at-k)
-              v' (cond
-                   (and children? (map? v))
-                   (apply-transform* node-at-k v opts)
-                   (and children? (sequential? v))
-                   (mapv #(apply-transform* node-at-k % opts) v)
-                   :else v)]
-          (rf new-map {:key k :value v' :node node-at-k})))
+              v' (vf {:key k :value v :node node-at-k})
+              v'' (cond
+                    (and children? (map? v'))
+                    (apply-transform* node-at-k v' opts)
+                    (and children? (sequential? v'))
+                    (mapv #(apply-transform* node-at-k % opts) v')
+                    :else v')]
+          (rf new-map {:key k :value v'' :node node-at-k})))
       {} m)))
 
 (defn apply-transform

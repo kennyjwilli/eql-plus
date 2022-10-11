@@ -147,6 +147,20 @@
         (eql+/datomic-pull->ast ['*]))
     "wildcard"))
 
+(comment
+  (apply-transform*
+    (eql/query->ast
+      [{(list :terms {::transform-fn (comp vec vals)})
+        [(list :priceDimensions {::transform-fn (comp vec vals)})]}])
+    {:terms {"ad1.abc" {:priceDimensions {"a" {:id "a"}
+                                          "b" {:id "b"}}}}}
+    {:rf (fn [acc {:keys [key value node]}]
+           (assoc acc key
+             (if-let [f (get-in node [:params ::transform-fn])]
+               (f value)
+               value)))})
+  )
+
 (deftest apply-transform-unit-test
   (is (= {:A 1
           :B {}
@@ -160,7 +174,19 @@
            :b {:c 2}
            :c [{:a 1}]
            :d 3}
-          {:rf (eql+/transform-rename-rf {:get-new-key #(get-in % [:params :as])})}))))
+          {:rf (eql+/transform-rename-rf {:get-new-key #(get-in % [:params :as])})})))
+  (is (= {:id->m [{:lookup [{:id "a"}
+                            {:id "b"}]}]}
+        (eql+/apply-transform
+          [{(list :id->m {::vf (comp vec vals)}) [(list :lookup {::vf (comp vec vals)})]}]
+          {:id->m {"id1" {:lookup {"a" {:id "a"}
+                                   "b" {:id "b"}}}}}
+          {:rf (fn [acc {:keys [key value]}]
+                 (assoc acc key value))
+           :vf (fn [{:keys [node value]}]
+                 (if-let [vf (-> node :params ::vf)]
+                   (vf value)
+                   value))}))))
 
 (deftest map-select-unit-test
   (is (= {}
