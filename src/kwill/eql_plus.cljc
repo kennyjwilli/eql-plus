@@ -169,10 +169,11 @@
                            k (key entry)
                            k-node (param->node k)
                            sub-q (val entry)]
-                       (assoc k-node
-                         :type :join
-                         :query sub-q
-                         :children (transform sub-q)))
+                       (cond-> (assoc k-node
+                                 :type :join
+                                 :query sub-q)
+                         (sequential? sub-q)
+                         (assoc :children (transform sub-q))))
                      (param->node q))) query))]
      {:type     :root
       :children (transform pull-pattern)})))
@@ -180,6 +181,9 @@
 (comment
   (datomic-pull->ast [(list :a :limit 1)])
   (datomic-pull->ast '[*])
+  (datomic-pull->ast '[{:foo [*]}])
+  (datomic-pull->ast '[{:unlimited ...}])
+  (datomic-pull->ast '[{:unlimited 2}])
   (datomic-pull->ast [:a {:b [:a]}]))
 
 (defn datomic-pull->query

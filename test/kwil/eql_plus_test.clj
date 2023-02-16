@@ -145,7 +145,22 @@
                        :key          *}]
            :type     :root}
         (eql+/datomic-pull->ast ['*]))
-    "wildcard"))
+    "wildcard")
+  (is (= '{:children [{:dispatch-key :foo
+                       :key          :foo
+                       :query        *
+                       :type         :join}]
+           :type     :root}
+        (eql+/datomic-pull->ast '[{:foo *}]))
+    "nested wildcard")
+  (is (= '{:type     :root
+           :children [{:type :join :dispatch-key :foo :key :foo :query ...}]}
+        (eql+/datomic-pull->ast '[{:foo ...}]))
+    "unlimited recursion")
+  (is (= '{:type     :root
+           :children [{:type :join :dispatch-key :foo :key :foo :query 2}]}
+        (eql+/datomic-pull->ast '[{:foo 2}]))
+    "limited recursion"))
 
 (comment
   (apply-transform*
