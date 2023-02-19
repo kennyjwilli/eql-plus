@@ -5,5 +5,5 @@ A collection of helper functions for common EQL tasks -- an extension to the EQL
 ## Installation
 
 ```clojure
-dev.kwill/eql-plus {:mvn/version "1.0.8"}
+dev.kwill/eql-plus {:mvn/version "1.0.10"}
 ```
