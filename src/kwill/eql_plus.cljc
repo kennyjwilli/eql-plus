@@ -192,6 +192,18 @@
   ([pull-pattern opts]
    (eql/ast->query (datomic-pull->ast pull-pattern opts))))
 
+(defn default-node-at-key
+  "Default implementation for :node-at-key-fn for [[apply-transform*]]."
+  [{:keys [key node-lookup]}]
+  (get node-lookup key))
+
+(defn node-at-key-with-wildcard
+  "[[apply-transform*]] `node-at-key-fn` implementation supporting wildcard (*)."
+  [{:keys [node-lookup] :as argm}]
+  (or
+    (default-node-at-key argm)
+    (get node-lookup '*)))
+
 (defn apply-transform*
   "Returns a map created by recursively following paths that exist in the EQL `ast`
   and `m`. Takes an option map of the following keys.
@@ -202,17 +214,20 @@
         `:node` - the node at the path for the kv pair.
     `node-key-fn` - Function passed the AST node returning a unique identifier
       for the node at that position in the tree. Defaults to :dispatch-key.
+    `node-at-key-fn` - Function passed the key and value in `m` and a map of
+      `node-key` to node, expected to return the AST node for `k`.
     `vf` - Function passed the `:key`, `:value`, and `:node` and should return
       the value to be passed to `rf`."
-  [ast m {:keys [rf vf node-key-fn]
-          :or   {rf          #(assoc %1 (:key %2) (:value %2))
-                 node-key-fn :dispatch-key
-                 vf          :value}
+  [ast m {:keys [rf vf node-key-fn node-at-key-fn]
+          :or   {rf             #(assoc %1 (:key %2) (:value %2))
+                 node-key-fn    :dispatch-key
+                 node-at-key-fn default-node-at-key
+                 vf             :value}
           :as   opts}]
   (let [dispatch->node (into {} (map (juxt node-key-fn identity)) (:children ast))]
     (reduce-kv
       (fn [new-map k v]
-        (let [node-at-k (get dispatch->node k)
+        (let [node-at-k (node-at-key-fn {:key k :value v :node-lookup dispatch->node})
               children? (:children node-at-k)
               v' (vf {:key k :value v :node node-at-k})
               v'' (cond
@@ -251,17 +266,21 @@
 
 (defn map-select*
   "Filters `m` by the `ast`. Similar to `select-keys` or Datomic pull. "
-  [ast m]
-  (apply-transform* ast m
-    {:rf (fn [new-map {:keys [key value node]}]
-           (if node
-             (assoc new-map key value)
-             new-map))}))
+  ([ast m] (map-select* ast m nil))
+  ([ast m transform-opts]
+   (apply-transform* ast m
+     (merge
+       {:rf (fn [new-map {:keys [key value node]}]
+              (if node
+                (assoc new-map key value)
+                new-map))}
+       transform-opts))))
 
 (defn map-select
   "See [[map-select*]]."
-  [query m]
-  (map-select* (eql/query->ast query) m))
+  ([query m] (map-select query m nil))
+  ([query m transform-opts]
+   (map-select* (eql/query->ast query) m transform-opts)))
 
 (comment
   (map-select

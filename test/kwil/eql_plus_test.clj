@@ -219,7 +219,17 @@
           :c {:d 3}
           :f {:g 4}}
         (eql+/map-select [:a {:c [:d]} :f]
-          {:a 1 :b 2 :c {:d 3} :f {:g 4}}))))
+          {:a 1 :b 2 :c {:d 3} :f {:g 4}})))
+  (is (= {}
+        (eql+/map-select '[*]
+          {:a 1 :c {:d 3}}))
+    "Default wildcard selects nothing")
+  (is (= {:a 1
+          :c {:d 3}}
+        (eql+/map-select '[* {:c [:d]}]
+          {:a 1 :c {:d 3 :e 2}}
+          {:node-at-key-fn eql+/node-at-key-with-wildcard}))
+    "Adding node-at-key-with-wildcard supports wildcard."))
 
 (deftest top-level-keys-unit-test
   (is (= [] (eql+/top-level-keys [])))
